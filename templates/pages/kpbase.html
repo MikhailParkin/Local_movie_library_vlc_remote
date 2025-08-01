@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %} {{ title }} {% endblock %}
+
+{% block content %}
+        <div class="d-grid gap-2 col-8 mx-auto">
+                <button id='add' class="btn btn-secondary" type="button">Добавить</button>
+        </div>
+     <div id="listvideo" class="adminlist">
+
+        <ol id="fetchResult" class="list-group list-group-numbered">
+            {% for item in list_kp %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div class="ms-2 me-auto">{{ item.name }}</div>
+                <span id={{ item.id }} class="btn btn-secondary edit">Edit</span>
+            </li>
+            {% endfor %}
+
+        </ol>
+    </div>
+
+
+  <div id="editform" class="costummodal">
+
+        <div class="modal-content">
+          <span id="close" class="close">&times;</span>
+          <form name="editForm">
+            <div class="d-grid gap-2 col-12 mx-auto">
+
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text">KP ID</span>
+                    <input id="kpid" name="kpId" type="text" class="form-control">
+                    <span class="input-group-text">Рейтинг</span>
+                    <input id="rate" name="rate" type="text" class="form-control">
+                    <span class="input-group-text">Год</span>
+                    <input id="year" name="year" type="text" class="form-control">
+                </div>
+
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text">Название</span>
+                    <input id="nameRus" name="nameRus" type="text" class="form-control">
+                </div>
+
+                <div id="file-list">
+                     <ol id="list" class="list-group list-group-numbered">
+
+                    </ol>
+
+
+                </div>
+                    <div id="add-container" class="d-grid gap-2 col-8 mx-auto">
+                        <button id='add-filepath' class="btn btn-secondary" type="button">Добавить путь к файлу</button>
+                    </div>
+
+                <img id='image' name="image" class="imgEdit" src="#" style="width: 300px;"></img>
+
+                <div class="input-group input-group-lg">
+                    <input type="file" name="file" class="form-control" id="uploadImg">
+                </div>
+
+                <br>
+
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text">Описание</span>
+                    <textarea id="describe" name="describe" class="form-control"></textarea>
+                </div>
+
+                <div class="editbuttons">
+                <div class="row">
+                    <div class="col col-1">
+                        <button id="saveBtn" name="saveBtn" type="button" class="btn btn-outline-success">Сохранить</button>
+                    </div>
+                </div>
+
+                </div>
+          </form>
+
+        </div>
+
+    </div>
+
+    <dialog  id="dialog-poster">
+        <form method="dialog">
+          <h3>Заменить постер?</h3>
+            <div class="form-check">
+                <input id="check-poster" style="display:none;" class="form-check-input" type="checkbox" value="">
+                <label id="checklable-poster" style="display:none;" class="form-check-label" for="check-poster">
+                Заменить постер для всех эпизодов?
+                </label>
+            </div>
+            <br>
+          <button type="submit" class="btn btn-primary"  value="OK">OK</button>
+          <button type="submit" class="btn btn-secondary" value="Cancel">Отмена</button>
+        </form>
+    </dialog>
+
+    <dialog  id="dialog-delete">
+        <form method="dialog">
+          <h3>Удалить из списка?</h3>
+            <div class="form-check">
+                <input id="check-delete" class="form-check-input" type="checkbox" value="">
+                <label class="form-check-label" for="check-delete">
+                Удалить файл с устройства.
+                </label>
+            </div>
+            <br>
+          <button type="submit" class="btn btn-primary"  value="OK">OK</button>
+          <button type="submit" class="btn btn-secondary" value="Cancel">Отмена</button>
+        </form>
+    </dialog>
+
+</div>
+
+    <div id="filelist" class="costummodal">
+
+        <div class="modal-content">
+          <span id="close2" class="close">&times;</span>
+
+            <div class="adminmenu">
+<!--            <select id="cat" class="form-select form-select-lg mb-3" aria-label=".form-select-lg example">-->
+<!--&lt;!&ndash;                <option selected value="LastView">Категория видео</option>&ndash;&gt;-->
+<!--            </select>-->
+        </div>
+
+            <ol id="files" class="list-group list-group-numbered">
+
+            </ol>
+
+        </div>
+
+    </div>
+
+
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', path='/js/kpinfo.js') }}"></script>
+{% endblock %}

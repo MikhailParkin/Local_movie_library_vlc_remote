@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+    <title>{% block title %}{{ title }}{% endblock %}</title>
+
+    {# Global CSS #}
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/button.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/bootstrap.min.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    {% include "components/navbar.html" %}
+
+    {% block content_wrapper %}
+    <main>
+        {% block content %}{% endblock %}
+        {% include "components/vlc_remote.html" %}
+    </main>
+    {% endblock %}
+
+    {% include "components/footer.html" %}
+
+    {# Global JavaScript #}
+    <script src="{{ url_for('static', path='/js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

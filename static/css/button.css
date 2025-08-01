@@ -1,0 +1,91 @@
+.btncostum {
+    transition-duration: 0.4s;
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+    border-radius: 20px;
+    margin-bottom: 50px;
+    margin-top: 50px;
+    font-size: 32px;
+    padding: 32px;
+    background-color: #2b2d2c;
+    color: white;
+    
+
+}
+
+.btncostum:hover {
+    box-shadow: 0 16px 32px 0 rgba(0,0,0,0.2);
+    
+    background-color: rgb(93, 90, 90);
+}
+
+.btncostum:active {
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+}
+
+.btncostum1 {
+    transition-duration: 0.4s;
+    box-shadow: 0 4px 8px 0 rgba(2, 2, 2, 0.2);
+    border-radius: 20px;
+    margin-bottom: 25px;
+    margin-left: 25px;
+    margin-right: 25px;
+    margin-top: 25px;
+    font-size: 32px;
+    padding: 32px;
+    background-color: #163124;
+    color: white;
+    
+
+}
+
+.btncostum1:hover {
+    box-shadow: 0 16px 32px 0 rgba(0,0,0,0.2);
+    
+    background-color: rgb(93, 90, 90);
+}
+
+.btncostum1:active {
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+}
+
+/* The Modal (background) */
+.costummodal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    padding-top: 10px; /* Location of the box */
+    padding-left: 10px;
+    padding-right: 10px;
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto;
+    /* overflow: Y auto; Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+  }
+  
+  /* Modal Content */
+  .modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+  }
+  
+  /* The Close Button */
+  .close {
+    color: #aaaaaa;
+    float: right;
+    font-size: 50px;
+    font-weight: bold;
+  }
+  
+  .close:hover,
+  .close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+  }

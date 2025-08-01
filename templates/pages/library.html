@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %} {{ title }} {% endblock %}
+
+{% block content %}
+
+        <div id="result" class="library">
+
+            {% for key, values in services.items() %}
+
+        <div class="container lib">
+            <div class="row justify-content-md-center">
+                <div class="col-6"><h3>{{ key }}</h3></div>
+                <div id="{{ key }}-+" class="col-1"><button class="btn btn-success select">+</button></div>
+                <div id="{{ key }}-reload"class="col-3"><button class="btn btn-primary reload">↻</button></div>
+            </div>
+        </div>
+                    {% for value in  values %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div class="ms-2 me-auto">📂 {{ value.category_path }}</div>
+                    <span id="{{ value.id }}-delete" class="btn btn-danger delete">Delete</span>
+                </li>
+                    {% endfor %}
+            {% endfor %}
+        </div>
+
+
+    <div id="select-path" class="costummodal">
+
+        <div class="modal-content">
+        <span id="close" class="close">&times;</span>
+            <h3 id="lib-name">Добавить в библиотеку </h3>
+            <div class="input-group input-group-lg">
+                <input id="text-area" type="text" class="form-control" placeholder="Путь к файлам" aria-label="Путь к файлам" aria-describedby="button-add">
+                <button class="btn btn-outline-secondary" type="button" id="button-add">Добавить</button>
+            </div>
+            <div class="list-path">
+                <ul id="list-path" class="list-group list-group-flush">
+
+
+                </ul>
+
+            </div>
+
+        </div>
+
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', path='/js/library.js') }}"></script>
+{% endblock %}

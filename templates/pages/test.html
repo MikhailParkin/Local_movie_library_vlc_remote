@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %} {{ title }} {% endblock %}
+
+{% block content %}
+
+<form method="post"  action="/api/test_form/" name="editForm">
+            <div class="d-grid gap-2 col-12 mx-auto">
+
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text">KP ID</span>
+                    <input id="kpid" name="kpId" type="text" class="form-control">
+                    <span class="input-group-text">Рейтинг</span>
+                    <input id="rate" name="rate" type="text" class="form-control">
+                    <span class="input-group-text">Год</span>
+                    <input id="year" name="year" type="text" class="form-control">
+                </div>
+
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text">Название</span>
+                    <input id="nameRus" name="nameRus" type="text" class="form-control">
+                </div>
+
+                <div id="file-list">
+                     <ol id="list" class="list-group list-group-numbered">
+
+                    </ol>
+
+
+                </div>
+                    <div id="add-container" class="d-grid gap-2 col-8 mx-auto">
+                        <button id='add-filepath' class="btn btn-secondary" type="button">Добавить путь к файлу</button>
+                    </div>
+
+                <img id='image' name="image" class="imgEdit" src="#" style="width: 300px;"></img>
+
+                <div class="input-group input-group-lg">
+                    <input type="file" name="file" class="form-control" id="uploadImg">
+                </div>
+
+                <br>
+
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text">Описание</span>
+                    <textarea id="describe" name="describe" class="form-control"></textarea>
+                </div>
+
+                <div class="editbuttons">
+                <div class="row">
+                    <div class="col col-1">
+                        <button id="saveBtn" name="saveBtn" type="submit" class="btn btn-outline-success">Сохранить</button>
+                    </div>
+                </div>
+
+            </div>
+</form>
+
+{% endblock %}

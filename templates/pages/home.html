@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block extra_css %}
+
+{% endblock %}
+
+{% block content %}
+    <div id="mainmenu" class="container-fluid">
+        <div class="menu">
+
+            <div class="d-grid gap-2 col-8 mx-auto">
+                {% for item in categories %}
+                <button id={{ item.category }} class="home btncostum" type="button">{{ item.name }}</button>
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
+
+
+    </ul>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', path='/js/service.js') }}"></script>
+{% endblock %}
+

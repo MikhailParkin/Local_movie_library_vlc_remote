@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>M3U8 Player (Локальный сервер)</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <link href="/static/css/style_tv.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+  <!-- Левая колонка - плеер и EPG -->
+  <div class="player-column">
+    <div class="video-container">
+      <video id="videoPlayer" controls></video>
+    </div>
+    
+    <div class="epg-info">
+      <div class="epg-group" id="currentChannelGroup"></div>
+      <div class="epg-title" id="currentProgramName">Выберите канал</div>
+      <div class="epg-description" id="currentProgramDesc"></div>
+    </div>
+    
+    <div class="controls">
+      <button id="prevPageBtn" class="nav-button">← Назад</button>
+      <button id="nextPageBtn" class="nav-button">Вперед →</button>
+      <button id="categoriesBtn" class="nav-button">Категории</button>
+      <button id="epgBtn" class="nav-button">Программа</button>
+      <button id="channelsBtn" class="nav-button" style="display: none;">Список каналов</button>
+    </div>
+  </div>
+  
+  <!-- Правая колонка - список категорий/каналов/программ -->
+  <div class="channels-column">
+    <div class="list-header">
+      <div class="list-title" id="listTitle">Категории</div>
+      <div class="list-count" id="listCount">0 элементов</div>
+    </div>
+    
+    <div class="list-container">
+      <div class="list-grid" id="listGrid">
+        <!-- Элементы списка будут добавляться здесь -->
+      </div>
+    </div>
+  </div>
+
+<script src="/static/js/iptv_hls.js" type="text/javascript" crossorigin="anonymous"></script>
+
+</body>
+</html>

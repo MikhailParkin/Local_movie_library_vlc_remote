@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %} {{ title }} {% endblock %}
+
+{% block content %}
+
+     <div id="list-local-video" class="adminlist">
+
+        <ol id="fetchResult" class="list-group list-group-numbered">
+
+            {% for item in list_files %}
+
+                <li id={{ item.id }} class="list-group-item d-flex justify-content-between align-items-center">
+                {% if item.category == 'Serials' or item.category == 'MultSerial' %}
+                <div  id="serial-{{ item.id }}" style="cursor: pointer" class="ms-2 me-auto serials">{{ item.file_name }}</div>
+                {% else %}
+                <div style="overflow: hidden" class="ms-2 me-auto">{{ item.file_name }}</div>
+                {% endif %}
+                <span class="btn btn-secondary edit">Add KPinfo</span>
+                {% if item.active %}
+                    <span class="btn btn-secondary active">Delete</span>
+                {% else %}
+                    <span class="btn btn-secondary active">Active</span>
+                {% endif %}
+
+            </li>
+            {% endfor %}
+
+        </ol>
+     </div>
+
+    <div id="kp-list" class="costummodal">
+
+        <div class="modal-content">
+          <span id="close2" class="close">&times;</span>
+
+            <ol id="kpinfo" class="list-group list-group-numbered">
+
+            </ol>
+
+        </div>
+
+    </div>
+
+        <div id="serial-list" class="costummodal">
+
+        <div class="modal-content">
+          <span id="close3" class="close">&times;</span>
+
+            <div id="serials">
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+ <div id="editform" class="costummodal">
+
+        <div class="modal-content">
+          <span id="close4" class="close">&times;</span>
+              <form name="editForm">
+                    <div class="d-grid gap-2 col-12 mx-auto">
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text">Название</span>
+                            <input id="nameRus" name="nameRus" type="text" class="form-control">
+                        </div>
+
+                        <img id='image' name="image" class="imgEdit" src="#" style="width: 300px;"></img>
+
+                        <div class="input-group input-group-lg">
+                            <input type="file" name="file" class="form-control" id="uploadImg">
+                        </div>
+
+                        <div class="row">
+                            <div class="col col-1">
+                                <button id="EditsaveBtn" name="saveBtn" type="button" class="btn btn-outline-success">Сохранить</button>
+                            </div>
+                        </div>
+                    </div>
+              </form>
+        </div>
+ </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', path='/js/local_bd.js') }}"></script>
+{% endblock %}

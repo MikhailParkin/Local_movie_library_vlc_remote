@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %} {{ title }} {% endblock %}
+
+{% block content %}
+
+<div id="listvideo" class="container-fluid">
+
+
+</div>
+
+<div id="findBar" class="sticky2">
+  <div class="btn-toolbar mb-3" role="toolbar">
+
+    <div class="input-group-lg">
+      <input id="finder" type="text" class="form-control" placeholder="">
+    </div>
+
+    <div class="btn-group-lg mr-2" role="group">
+      <button id="alphabet" type="button" class="btn btn-secondary">А - Я</button>
+      <button id="rate" type="button" class="btn btn-secondary">Рейтинг</button>
+      <button id="year" type="button" class="btn btn-secondary">Год</button>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', path='/js/list_video_js.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block extra_css %}
+
+{% endblock %}
+
+{% block content %}
+
+
+    <div id="mainmenu" class="container-fluid">
+        <div class="menu">
+
+            <div class="d-grid gap-2 col-8 mx-auto">
+
+
+                <button id='lib' class="home btncostum" type="button">Библиотеки</button>
+                <button id='kpbase' class="home btncostum" type="button">БД Кинопоиск</button>
+                <button id='local-base' class="home btncostum" type="button">БД Файлов</button>
+
+                <button id='length' class="home btncostum" type="button">Найти длину видео для всех файлов</button>
+
+
+                <button id='backup' class="home btncostum" type="button">BackUp БД</button>
+
+                  <div class="backuplist">
+                    <select id="cat" class="form-select form-select-lg mb-3" aria-label=".form-select-lg example">
+                        <option selected value=""> </option>
+                        {% for item in backups %}
+                            <option id={{ item.id }} value={{ item.file_name }}>{{ item.file_name }}</option>
+                        {% endfor %}
+
+                    </select>
+                  </div>
+
+                <button id='restore' class="home btncostum" type="button">Restore БД</button>
+
+                    <h1> IPTV </h1>
+
+                    <br>
+
+                <h3>
+                    Ссылка на плейлист:
+                </h3>
+
+                <input id="playlist-url" type="text" class="form-control form-control-lg">
+
+                <button  id="playlist-confirm" class="home btncostum" type="button">Подтвердить</button>
+
+                <div class="flex-container">
+                    <div class="flex-column">
+                        <button id="playlist-update" class="btncostum" type="button">Playlist update</button>
+                    </div>
+                    <div class="flex-column">
+                        <button id="epg-update" class="btncostum" type="button">Epg update</button>
+                    </div>
+                </div>
+
+            </div>
+
+
+
+        </div>
+    </div>
+
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', path='/js/admin.js') }}"></script>
+{% endblock %}
