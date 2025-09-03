@@ -1,0 +1,1 @@
+import{_ as e,c as n,B as o,g as s}from"./index-C41ojl20.js";const c={},a={class:"menu-button"};function r(t,_){return s(),n("button",a,[o(t.$slots,"default",{},void 0)])}const f=e(c,[["render",r],["__scopeId","data-v-abf78632"]]);export{f as L};

@@ -1,0 +1,1 @@
+import{d as a,r as e}from"./index-B6W1ot8u.js";import{h as f,A as r}from"./api-C5EsW-zO.js";const p=a("kpinfo",()=>{const o=e();async function t(){const{data:n}=await f.get(r.kp_info);o.value=n}return{kpinfo:o,fetchKpinfo:t}});export{p as u};

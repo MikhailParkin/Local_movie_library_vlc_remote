@@ -1,0 +1,1 @@
+import{d as n,r}from"./index-Cl8wapc-.js";import{h as s,A as d}from"./api-BnkjjIlq.js";const f=n("plaingvideo",()=>{const a=r();async function e(o,t){const{data:i}=await s.get(d.playingvideo(o,t));a.value=i}return{playingvideo:a,fetchPlayingVideo:e}});export{f as u};
