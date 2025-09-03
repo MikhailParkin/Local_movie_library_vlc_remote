@@ -1,12 +1,13 @@
 import os
 
-from fastapi import FastAPI, Body, Request, UploadFile
+import iptv
+from fastapi import FastAPI, Body, Request, UploadFile, Form, HTTPException, File
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import exc
 from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 from starlette.templating import Jinja2Templates
-from typing import Union
+from typing import Union, Optional
 import aiofiles
 import uvicorn as uvicorn
 from pathlib import Path
@@ -22,7 +23,7 @@ from library import update_library, get_backups, backup_bd, restore_bd, length_v
 app = FastAPI()
 templates = Jinja2Templates(directory='templates')
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
 origins = [
     "http://localhost",
@@ -31,6 +32,9 @@ origins = [
     "http://127.0.0.1:5500",
     "http://0.0.0.0:5500",
     "http://0.0.0.0:5550",
+    "http://0.0.0.0:5174",
+    "http://localhost:5174",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
@@ -41,8 +45,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-favicon_path = 'static/img/favicon.ico'
-index_path = 'static/test.html'
+favicon_path = 'public/img/favicon.ico'
+index_path = 'templates/index.html'
+UPLOAD_DIRECTORY = 'public/img/posters'
 
 
 @app.get('/favicon.ico', include_in_schema=False)
@@ -50,173 +55,11 @@ async def favicon():
     return FileResponse(favicon_path)
 
 
-@app.get('/tv')
-async def iptv_hls(request: Request):
+@app.get("/")
+async def read_root(request: Request):
     return templates.TemplateResponse(
-        "pages/iptv_hls.html",
+        "index.html",
         {"request": request}
-    )
-
-
-@app.get('/manage_local_db/library')
-async def show_libraries(request: Request):
-    libraries = db_query.list_library()
-    return templates.TemplateResponse(
-        "pages/library.html",
-        {"request": request, "title": 'Библиотеки', 'services': libraries}
-        )
-
-
-@app.post('/manage_local_db/api/library/add')
-async def add(data=Body()):
-    print(data)
-    db_query.add_library(data)
-    return {'result': 'Data change!'}
-
-
-@app.delete('/manage_local_db/api/library/delete/{lib_id}')
-async def delete(lib_id: str):
-    print(lib_id)
-    db_query.delete_library(lib_id)
-    return {'result': 'Data change!'}
-
-
-@app.post('/manage_local_db/api/library/getPath')
-async def add(data=Body()):
-    print(data)
-    paths = db_query.find_path(data)
-    return {'result': paths}
-
-
-@app.get('/manage_local_db/api/library/update/{lib_id}')
-async def update(lib_id: str):
-    print(lib_id)
-    res = update_library(lib_id)
-    return {'result': res}
-
-
-@app.get('/kpbase')
-async def show_files(request: Request):
-    list_kp = db_query.get_kpinfo_all()
-    return templates.TemplateResponse(
-        "pages/kpbase.html",
-        {"request": request, "title": 'KPinfo', 'list_kp': list_kp}
-        )
-
-
-@app.get('/manage_kp_db/api/kpinfo/{kp_id}')
-async def get_kpinfo(kp_id: str):
-    video_info = db_query.get_kpinfo(kp_id)
-    return {'result': video_info}
-
-
-@app.get('/manage_kp_db/api/kpinfo/{action}/{path}')
-def edit_paths(action: str, path: str, q: Union[str, None] = None):
-    print(f'Action: {action}, file_id {path},  kp ID = {q}')
-    if action == 'deletepath':
-        db_query.delete_kpinfo_path(path)
-        result = 'Path Deleted!'
-    elif action == 'addpath':
-        result = db_query.select_all_video()
-        print(result)
-    elif action == 'addValue':
-        video_id = path
-        kp_id = q
-        result = db_query.add_kpinfo_on_film_base(video_id, kp_id)
-    elif action == 'deactive':
-        video_id = path
-        result = db_query.deactive_video(video_id)
-    return {'result': result}
-
-
-@app.post('/manage_kp_db/api/kpinfo/{file_id}')
-def edit_kpinfo(file_id: str, data=Body()):
-    print(file_id)
-    print(data)
-    try:
-        if file_id == 'new':
-            result = db_query.new_record_kpinfo(data)
-        else:
-            result = db_query.edit_kpinfo(data, file_id)
-    except exc.SQLAlchemyError as r:
-        result = r
-    return result
-
-
-@app.post('/manage_kp_db/api/kpinfo/upload/{file_id}')
-async def upload_poster(file_id: str, poster: UploadFile):
-    local_path = Path.cwd()
-    out_file_path = Path(local_path, 'static', 'img', 'posters', poster.filename)
-    if out_file_path.exists():
-        os.remove(out_file_path)
-    path_to_db = Path('static', 'img', 'posters', poster.filename)
-    print(str(path_to_db))
-    # result = db_query.edit_kpinfo_poster(file_id, str(path_to_db))
-    result = 'File Upload'
-
-    async with aiofiles.open(out_file_path, 'wb') as out_file:
-        while content := await poster.read(1024):
-            await out_file.write(content)
-
-    return {'result': result}
-
-
-@app.get('/localbase')
-async def show_files(request: Request):
-    list_files = db_query.get_files_all()
-    return templates.TemplateResponse(
-        "pages/localbase.html",
-        {"request": request, "title": 'LocalFileBase', 'list_files': list_files}
-        )
-
-
-@app.get('/localbase/api/kpinfo_all')
-async def show_kpinfo():
-    list_kp_base = db_query.get_kp_name_all()
-    return list_kp_base
-
-
-@app.get('/localbase/api/multiseries/{file_id}')
-async def select_series(file_id: str):
-    list_series = db_query.select_multiseries(file_id)
-    return list_series
-
-
-@app.get('/localbase/api/multiseries/{base}/{file_id}')
-async def select_episode(base:  str, file_id: str):
-    result = db_query.select_episode(base, file_id)
-    return result
-
-###############################################################
-
-
-@app.post('/localbase/api/multiseries/{base}/{file_id}')
-async def upload_poster(base:  str, file_id: str, data=Body()):
-    result = db_query.update_episode(base, file_id, data)
-    return {'result': result}
-
-
-@app.post('/localbase/api/upload/{base}/{file_id}')
-async def upload_poster(base:  str, file_id: str, poster: UploadFile):
-    local_path = Path.cwd()
-    out_file_path = Path(local_path, 'static', 'img', 'posters', poster.filename)
-    path_to_db = Path('static', 'img', 'posters', poster.filename)
-    print(str(path_to_db))
-
-    async with aiofiles.open(out_file_path, 'wb') as out_file:
-        while content := await poster.read(1024):
-            await out_file.write(content)
-    result = 'File Upload'
-    return {'result': result}
-######################################################################
-
-
-@app.get("/home")
-async def home(request: Request):
-    categories = db_query.get_categories()
-    return templates.TemplateResponse(
-        "pages/home.html",
-        {"request": request, "title": "Home", 'categories': categories}
     )
 
 
@@ -228,75 +71,6 @@ def play_video_file(category: str, file_id: str):
     vlc.open_vlc(file_path)
     vlc.set_playlist(playlist)
     return {'video': video}
-
-
-@app.get('/localbase/api/listmultiseries/{base}/{file_id}')
-async def select_series(base: str, file_id: str):
-    print('BASE: ', base, 'ID: ', file_id)
-    list_series = db_query.select_multiseries_list(base, file_id)
-    return list_series
-
-
-@app.get('/api/remote/{command}')
-def control(command: str, q: Union[str, None] = None):
-    if len(q) > 0:
-        command = f'{command} {q}'
-        print('COMMAND', command)
-
-    print(command)
-    data = vlc.set_command(command)
-
-    return {'output': data}
-
-
-@app.get("/adminpage")
-async def admin_page(request: Request):
-    backups = get_backups()
-    return templates.TemplateResponse(
-        "pages/adminpage.html",
-        {"request": request, "title": "Admin", 'backups': backups}
-    )
-
-
-@app.post("/adminpage/api/playlist")
-async def api_playlist_settings(data=Body()):
-    playlist = db_query.playlist_settings(data)
-    return playlist
-
-
-@app.get("/adminpage/api/playlist_update/{key}")
-async def api_playlist_settings(key: str):
-    if key == 'playlist':
-        result = update_playlist()
-    if key == 'epg':
-        result = update_epg()
-    return result
-
-
-@app.get("/search")
-async def search_page(request: Request):
-    return templates.TemplateResponse(
-        "pages/search.html",
-        {"request": request, "title": "Поиск"}
-    )
-
-
-@app.get("/search/api/{value}")
-async def search_video(value: str):
-    list_videos = db_query.find_video(value)
-    return list_videos
-
-
-@app.get('/localbase/api/adminpage/{action}')
-def backup(action: str, q: Union[str, None] = None):
-    if action == 'backup':
-        backup_bd()
-    elif action == 'length':
-        length_video_vlc()
-    else:
-        restore_bd(q)
-    data = f'{action} complete'
-    return {'output': data}
 
 
 @app.get("/api/list_video/{category}")
@@ -319,13 +93,314 @@ async def search_epg_for_one_channel(data=Body()):
     return res
 
 
-@app.get('/{category}')
-async def video_list(category: str, request: Request):
-    print(category)
-    return templates.TemplateResponse(
-            "pages/list_video_js.html",
-            {"request": request, "title": category}
+################################################################
+@app.get("/api/get-categories")
+async def api_categories_list():
+    categories = db_query.get_categories()
+    return categories
+
+
+@app.get("/api/get-list-video/{category}")
+async def get_list_video(category: str):
+    list_videos = db_query.api_get_video_list(category)
+    return list_videos
+
+
+@app.get("/api/posters/{filename}")
+async def get_image(filename: str):
+    file_path = os.path.join(UPLOAD_DIRECTORY, filename)
+    return FileResponse(file_path)
+
+
+@app.get('/api/get-list-multiseries/{base}/{file_id}')
+async def select_series(base: str, file_id: str):
+    print('BASE: ', base, 'ID: ', file_id)
+    list_series = db_query.api_get_multiseries_list(base, file_id)
+    return list_series
+
+
+@app.get('/api/play-video/{category}/{file_id}')
+def play_video_file(category: str, file_id: str):
+    video = db_query.play_video(category, file_id)
+    file_path = (video.get('file_path'))
+    playlist = video.get('playlist')
+    vlc.open_vlc(file_path)
+    vlc.set_playlist(playlist)
+    return {'video': video}
+
+
+@app.get('/api/library/get-list')
+async def get_library():
+    libraries = db_query.list_library()
+    return libraries
+
+
+@app.post('/api/library/add')
+async def add(data=Body()):
+    print(data)
+    db_query.add_library(data)
+    return {'result': 'Data change!'}
+
+
+@app.delete('/api/library/delete/{lib_id}')
+async def delete(lib_id: str):
+    print(lib_id)
+    db_query.delete_library(lib_id)
+    return {'result': 'Data change!'}
+
+
+@app.post('/api/library/getPath')
+async def add(data=Body()):
+    print(data)
+    paths = db_query.find_path(data)
+    return paths
+
+
+@app.get('/api/library/update/{lib_id}')
+async def update(lib_id: str):
+    print(lib_id)
+    res = update_library(lib_id)
+    # res = "OK"
+    return {'result': res}
+
+
+@app.get('/api/remote/{command}')
+async def control(command: str, q: Union[str, None] = None):
+    if q:
+        command = f'{command} {q}'
+        print('COMMAND', command)
+
+    print(command)
+    data = vlc.set_command(command)
+
+    return data
+
+
+@app.get('/api/check_vlc_status')
+async def check_vlc():
+    data = vlc.check_vlc_status()
+    return data
+
+
+@app.get('/api/iptv/group')
+async def select_groups():
+    data = iptv.groups
+    return data
+
+
+@app.get('/api/iptv/channels/{group}')
+async def check_vlc(group: str):
+    data = iptv.select_channels_by_group(group)
+    return data
+
+
+@app.get('/api/iptv/epg/{group}')
+async def check_vlc(group: str):
+    data = iptv.epg_for_group_channel_now(group)
+    return data
+
+
+@app.get('/api/iptv/epg-channel/{channel_id}')
+async def check_vlc(channel_id: str):
+    data = iptv.epg_for_channel(channel_id)
+    return data
+
+
+@app.post('/api/iptv/play')
+def play_video_file(data=Body()):
+    print(data.get('url'))
+    vlc.open_vlc(data.get('url'))
+    return {'Ok'}
+
+
+@app.get('/api/kpinfo')
+async def get_kpinfo_data():
+    data = db_query.get_kpinfo_data()
+    return data
+
+
+@app.post('/api/kpinfo/{rec_id}')
+async def update_kp_info(
+        rec_id: int,
+        kp_id: Optional[str] = Form(None),
+        name: Optional[str] = Form(None),
+        year: Optional[str] = Form(None),
+        rate: Optional[str] = Form(None),
+        describe: Optional[str] = Form(None),
+        poster: Optional[UploadFile] = File(None)
+):
+    try:
+        updated_fields = {}
+        if kp_id is not None:
+            updated_fields["kp_id"] = kp_id
+        if name is not None:
+            updated_fields["name"] = name
+        if year is not None:
+            updated_fields["year"] = year
+        if rate is not None:
+            updated_fields["rate"] = rate
+        if describe is not None:
+            updated_fields["describe"] = describe
+        if poster is not None:
+            print(poster.filename)
+            local_path = Path.cwd()
+            out_file_path = Path(local_path, UPLOAD_DIRECTORY, poster.filename)
+            if out_file_path.exists():
+                os.remove(out_file_path)
+            path_to_db = Path(UPLOAD_DIRECTORY, poster.filename)
+            updated_fields["poster"] = str(path_to_db)
+            updated_fields["poster_filename"] = poster.filename
+            async with aiofiles.open(out_file_path, 'wb') as out_file:
+                while content := await poster.read(1024):
+                    await out_file.write(content)
+        record = db_query.update_kpinfo_data(rec_id, updated_fields)
+        print(record)
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "message": "Данные успешно обновлены",
+                "updated_fields": updated_fields
+            }
         )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при обновлении данных: {str(e)}"
+        )
+
+
+@app.post('/api/update-multiseries')
+async def update_kp_info(
+        database: Optional[str] = Form(None),
+        rec_id: Optional[str] = Form(None),
+        name: Optional[str] = Form(None),
+        poster: Optional[UploadFile] = File(None)
+):
+    try:
+        updated_fields = {'database': database, 'rec_id': rec_id}
+
+        if name is not None:
+            updated_fields["name"] = name
+        if poster is not None:
+            local_path = Path.cwd()
+            out_file_path = Path(local_path, UPLOAD_DIRECTORY, poster.filename)
+            if out_file_path.exists():
+                os.remove(out_file_path)
+            path_to_db = Path(UPLOAD_DIRECTORY, poster.filename)
+            updated_fields["poster"] = str(path_to_db)
+            updated_fields["poster_filename"] = poster.filename
+            async with aiofiles.open(out_file_path, 'wb') as out_file:
+                while content := await poster.read(1024):
+                    await out_file.write(content)
+        record = db_query.update_multiseries_info(updated_fields)
+        print(record)
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "message": "Данные успешно обновлены",
+                "updated_fields": updated_fields
+            }
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при обновлении данных: {str(e)}"
+        )
+
+
+@app.get('/api/local-db')
+async def get_local_db_data():
+    data = db_query.get_videos_all()
+    return data
+
+
+@app.post('/api/local-db')
+async def update_local_db_data(data=Body()):
+    print(data.get('file_id'))
+    print(data.get('kpinfo_id'))
+    res = db_query.update_videos_describe(data)
+    return res
+
+
+@app.get('/api/multiseries/{record_id}')
+async def get_local_db_data(record_id: int):
+    data = db_query.select_all_multiseries_files(record_id)
+    return data
+
+
+@app.get("/api/get-backups")
+async def list_backup_record():
+    backups = get_backups()
+    return backups
+
+
+@app.get('/api/admin-page/{action}')
+def admin_action(action: str, q: Union[str, None] = None):
+    if action == 'backup':
+        print('backup')
+        backup_bd()
+    elif action == 'length':
+        length_video_vlc()
+        print('length')
+    elif action == 'restore':
+        restore_bd(q)
+        print('restore ', q)
+    elif action == 'playlist-update':
+        print('playlist')
+        update_playlist()
+    elif action == 'epg_update':
+        print('epg')
+        update_epg()
+    data = f'{action} complete'
+    return {'output': data}
+
+
+@app.get("/api/playlist")
+async def api_get_settings():
+    playlist = db_query.get_settings_list()
+    return playlist
+
+
+@app.post("/api/playlist")
+async def api_set_settings(playlist_url: Optional[str] = Form(None),
+                           epg_url: Optional[str] = Form(None),):
+    updated_fields = {}
+    try:
+        if playlist_url is not None:
+            updated_fields["playlist_url"] = playlist_url
+        if epg_url is not None:
+            updated_fields["epg_url"] = epg_url
+        playlist = db_query.set_playlist_settings(updated_fields)
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "message": "Данные успешно обновлены",
+                "updated_fields": playlist
+            }
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при обновлении данных: {str(e)}"
+        )
+
+
+###################################################################
+
+
+# @app.get('/{category}')
+# async def video_list(category: str, request: Request):
+#     print(category)
+#     return templates.TemplateResponse(
+#             "pages/list_video_js.html",
+#             {"request": request, "title": category}
+#         )
 
 
 if __name__ == "__main__":

@@ -27,23 +27,25 @@ def video_duration(video_file):
             # for stream in streams:
             #     print(f'{stream}: {streams[0].get(f"{stream}")}')
             metadata = streams[0].get('tags')
-            for key in dict(metadata).keys():
-                print(key, metadata[key])
+            duration = metadata
+            if metadata:
+                for key in dict(metadata).keys():
+                    print(key, metadata[key])
 
-            if metadata is not None:
-                duration = metadata.get('DURATION')
-                title = metadata.get('title')
-                if duration is not None:
-                    duration = duration.split('.')[0]
-                    h, m, s = duration.split(':')
-                    duration = int(h) * 3600 + int(m) * 60 + int(s)
-                    print(duration)
-                if title is not None:
-                    print(title)
-                    if title != Path(video_file).name:
-                        vlc_remote.change_title_mkv(video_file)
-            else:
-                duration = metadata
+                if metadata is not None:
+                    duration = metadata.get('DURATION')
+                    title = metadata.get('title')
+                    if duration is not None:
+                        duration = duration.split('.')[0]
+                        h, m, s = duration.split(':')
+                        duration = int(h) * 3600 + int(m) * 60 + int(s)
+                        print(duration)
+                    if title is not None:
+                        print(title)
+                        if title != Path(video_file).name:
+                            vlc_remote.change_title_mkv(video_file)
+                else:
+                    duration = metadata
         else:
             metadata_tag = streams[0].get('duration')
             duration = int(metadata_tag.split('.')[0])
@@ -68,6 +70,7 @@ def update_lib_serials(category, files_in_db, files_paths, default_poster):
     series_in_db = set()
     series_on_disk = set()
     seasons = db.query(Seasons).all()
+    poster_name = Path(default_poster).name
     for item in seasons:
         print(item.file_path)
         seasons_in_db.add(Path(item.file_path))
@@ -87,7 +90,8 @@ def update_lib_serials(category, files_in_db, files_paths, default_poster):
         new_rec = VideoFiles(category=category,
                              file_path=item,
                              file_name=file_name,
-                             poster=default_poster, )
+                             poster=default_poster,
+                             poster_filename=poster_name)
         db.add(new_rec)
     db.commit()
     db.close()
@@ -101,13 +105,15 @@ def update_lib_serials(category, files_in_db, files_paths, default_poster):
     add_seasons = seasons_on_disk.difference(seasons_in_db)
     for item in add_seasons:
         name = str(Path(item).name)
+
         parent_name = str(Path(item).parent)
         serial_id = db.query(VideoFiles).filter_by(file_path=parent_name).one_or_none()
         new_rec = Seasons(videofiles_id=serial_id.id,
                           file_name=name,
                           name=name,
                           file_path=str(item),
-                          poster=default_poster)
+                          poster=default_poster,
+                          poster_filename=poster_name)
         db.add(new_rec)
     db.commit()
     db.close()
@@ -122,7 +128,7 @@ def update_lib_serials(category, files_in_db, files_paths, default_poster):
         parent_name = str(Path(item).parent)
         season_id = db.query(Seasons).filter_by(file_path=parent_name).one_or_none()
         new_rec = Series(seasons_id=season_id.id, name=name, file_path=str(item), poster=default_poster,
-                         file_name=str(item.name))
+                         file_name=str(item.name), poster_filename=poster_name)
         db.add(new_rec)
         # if Path(item).suffix == '.mkv' or Path(item).suffix == '.MKV':
         # change_title_mkv(item)
@@ -172,11 +178,13 @@ def update_library(lib_id):
             print(item)
             video_len = video_duration(item)
             file_name = Path(item).name
+            poster_name = Path(default_poster).name
             new_rec = VideoFiles(category=categories.category,
                                  file_path=str(item),
                                  file_name=file_name,
                                  video_length=video_len,
-                                 poster=default_poster)
+                                 poster=default_poster,
+                                 poster_filename=poster_name)
             db.add(new_rec)
             # if Path(item).suffix == '.mkv' or Path(item).suffix == '.MKV':
             #     change_title_mkv(item)

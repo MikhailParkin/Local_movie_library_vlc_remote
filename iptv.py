@@ -3,18 +3,26 @@ import gzip
 import shutil
 import datetime
 from pathlib import Path
+
+from sqlalchemy.orm import aliased
 from video_base import Session, engine
 from video_base import Playlist, EpgProgrammes, Settings
-from sqlalchemy import inspect
+from sqlalchemy import inspect, select
 from lxml import etree
 import pytz
+from requests.exceptions import ChunkedEncodingError, ConnectionError
+import time
 
-playlist_path = r'static\iptv\only4tv_full.m3u8'
+playlist_path = r'public\iptv\only4tv_full.m3u8'
 playlist_file = 'only4tv_full.m3u8'
-epg_path = r'static\iptv\epg.xml'
+epg_path = r'public\iptv\epg.xml'
+epg_original_path = r'public\iptv\epg_original.xml'
 epg_url = 'https://epg.online/epg.xml.gz'
+# epg_url_original = 'http://only4.tv/epg/epg.xml'
 epg_file = 'epg.xml.gz'
-output_directory = Path(Path.cwd(), 'static', 'iptv')
+epg_file_original = 'epg_original.xml'
+output_directory = Path(Path.cwd(), 'public', 'iptv')
+groups = ['КиноПлюс', 'Познавательные', 'UHD', 'Кино', 'Детские', 'Спорт', 'ХХХ']
 
 db = Session(autoflush=False, bind=engine)
 
@@ -25,7 +33,7 @@ def inspect_table(table_name):
     return inspect_engine.has_table(table_name)
 
 
-def download_file(kind_file):
+def download_file(kind_file, url):
     start_time = datetime.datetime.now()
     headers = {
         'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
@@ -53,7 +61,6 @@ def download_file(kind_file):
 
     elif kind_file == 'epg':
         print('Download start!')
-        url = epg_url
         r = requests.get(url,  headers=headers)
         with open(fr'{output_directory}/{epg_file}', 'wb') as f:
             f.write(r.content)
@@ -66,6 +73,33 @@ def download_file(kind_file):
     return file_type, start_time
 
 
+def download_file_epg_original(url):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36"
+    }
+    start_time = datetime.datetime.now()
+    print('Download start!')
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(url, stream=True, headers=headers)
+            with open(fr'{output_directory}/{epg_file_original}', 'wb') as f:
+                f.write(response.content)
+                print('File Download!')
+                file_type = 'EPG Download'
+            break  # Exit loop if successful
+        except (ChunkedEncodingError, ConnectionResetError) as e:
+            print(f"Attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)  # Exponential backoff
+            else:
+                print("Max retries reached. Could not download XML.")
+                raise  # Re-raise the exception if all retries fail
+                file_type = 'EPG download error!'
+    return file_type, start_time
+
+
+# download_file_epg_original()
 # download_file('playlist')
 # download_file('epg')
 
@@ -99,12 +133,16 @@ def list_channel(playlist):
                 dict_param_change = playlist_list[i]
                 dict_param_change['url'] = line.rstrip()
                 i += 1
-    groups = ['КиноПлюс', 'Детские', 'Познавательные', 'ХХХ', 'Спорт', 'UHD', 'Кино']
     db.query(Playlist).delete()
     db.commit()
     db.close()
     for item in playlist_list:
         if item.get('group-title') in groups:
+            uri = item['url']
+            uri_part = uri.split('/')
+            channel_number = uri_part[3]
+            token_part = uri_part[4].split('.')
+            m3u_token = token_part[1]
             print(item)
             new_rec = Playlist(channel_name=item['channel_name'],
                                catchup_days=item['catchup-days'],
@@ -112,11 +150,14 @@ def list_channel(playlist):
                                tvg_id=item['tvg-id'],
                                group_title=item['group-title'],
                                tvg_logo=item['tvg-logo'],
-                               url=item['url'])
+                               url=item['url'],
+                               channel_number=channel_number,
+                               m3u_token=m3u_token)
             db.add(new_rec)
     db.commit()
     db.close()
     return datetime.datetime.now()
+
 
 # list_channel(playlist_path)
 
@@ -133,13 +174,14 @@ def epg_read(epg):
         catchup_days = int(favorite_channel.catchup_days)
         actual_epg_date = start_time - datetime.timedelta(days=int(catchup_days))
         actual_epg_time_dict[favorite_channel.tvg_id] = actual_epg_date
-
+    channel_id_map = {channel.tvg_id: channel.id for channel in playlist}
     db.close()
     db.query(EpgProgrammes).delete()
     db.commit()
     db.close()
     context = etree.iterparse(epg, events=('start', 'end'))
     i = 0
+
     for event, element in context:
         if event == 'start' and element.tag == 'programme':
             attribute_value = element.get('channel')
@@ -163,7 +205,8 @@ def epg_read(epg):
                        'programme_end': datetime.datetime.strptime(stop, '%Y%m%d%H%M%S %z').replace(tzinfo=None),
                        'title': title,
                        'describe': describe,
-                       'tvg_id': attribute_value}
+                       'tvg_id': attribute_value,
+                       'playlist_id': channel_id_map.get(attribute_value)}
 
                 dict_data.append(rec)
                 print(i)
@@ -173,13 +216,7 @@ def epg_read(epg):
             while element.getprevious() is not None:
                 del element.getparent()[0]
     pars_time = datetime.datetime.now()
-    for elem in dict_data:
-        programme = EpgProgrammes(programme_start=elem['programme_start'],
-                                  programme_end=elem['programme_end'],
-                                  title=elem['title'],
-                                  describe=elem['describe'],
-                                  tvg_id=elem['tvg_id'])
-        db.add(programme)
+    db.bulk_insert_mappings(EpgProgrammes, dict_data)
     db.commit()
     db.close()
     end_time = datetime.datetime.now()
@@ -188,9 +225,6 @@ def epg_read(epg):
     print('Stop: ', end_time)
 
     return end_time
-
-
-# epg_read(epg_path)
 
 
 def convert_date(date):
@@ -260,9 +294,19 @@ def epg_for_one_channel(data):
 
 
 def update_epg():
-    result, start = download_file('epg')
+    get_epg_url = db.query(Settings).filter_by(id=1).one_or_none()
+    if get_epg_url:
+        url = get_epg_url.epg_url
+        file_type = url.split('.')[-1]
+        if file_type == 'gz':
+            result, start = download_file('epg', url)
+            file_name = epg_path
+        elif file_type == 'xml':
+            result, start = download_file_epg_original(url)
+            file_name = epg_original_path
+
     if result == 'EPG Download':
-        end = epg_read(epg_path)
+        end = epg_read(file_name)
     return f'EPG Updated! Start time: {start} - End time: {end}'
 
 
@@ -274,6 +318,82 @@ def update_playlist():
 
 
 # update_playlist()
+# update_epg()
 
 
+def select_channels_by_group(group_name):
+    channels = db.query(Playlist).filter_by(group_title=group_name).all()
+    return channels
 
+
+def epg_for_group_channel_now(group):
+    date_now = datetime.datetime.now()
+    list_epg_now = {}
+    prog_now = db.query(EpgProgrammes).filter(EpgProgrammes.programme_start <= date_now,
+                                              EpgProgrammes.programme_end >= date_now).all()
+    for prog in prog_now:
+        list_epg_now[prog.playlist_id] = prog.title
+    print(list_epg_now)
+    return list_epg_now
+
+
+def epg_for_channel(channel_id):
+    date_now = datetime.datetime.now()
+    channel = db.query(Playlist).filter_by(tvg_id=channel_id).first()
+    channel_number = channel.channel_number
+    m3u_token = channel.m3u_token
+    catchup_days = channel.catchup_days
+    history = date_now - datetime.timedelta(days=int(catchup_days))
+    exist_epg = []
+    for item in channel.epg_programme:
+        if item.programme_end >= history:
+            start_timestamp, duration = find_arch_data(item.programme_start, item.programme_end)
+            arch_url = f'http://r.only4.online/{channel_number}/tracks-v1a1/index-{start_timestamp}-{duration}.{m3u_token}'
+            rec = {'start': item.programme_start, 'end': item.programme_end,
+                   'title': item.title, 'desc': item.describe, 'url': arch_url}
+            exist_epg.append(rec)
+    db.close()
+    return exist_epg
+
+
+def test(tvg_id):
+    date_now = datetime.datetime.now()
+    channel = db.query(Playlist).filter_by(tvg_id=tvg_id).first()
+    channel_number = channel.channel_number
+    m3u_token = channel.m3u_token
+    catchup_days = channel.catchup_days
+    history = date_now - datetime.timedelta(days=int(catchup_days))
+    # exist_epg = channel.epg_programme.filter(EpgProgrammes.programme_end >= history).all
+    exist_epg = []
+    for item in channel.epg_programme:
+        if item.programme_end >= history:
+            start_timestamp, duration = find_arch_data(item.programme_start, item.programme_end)
+            arch_url = f'http://r.only4.online/{channel_number}/tracks-v1a1/index-{start_timestamp}-{duration}.{m3u_token}'
+            rec = {'start': item.programme_start, 'end': item.programme_end,
+                   'title': item.title, 'desc': item.describe, 'url': arch_url}
+            exist_epg.append(rec)
+    db.close()
+    return exist_epg
+
+# q = epg_for_channel('bcu-action')
+# for item in q:
+#     print(item)
+# test_date = 'datetime.datetime(2025, 8, 25, 17, 9)'
+# test('bcu-action')
+
+
+# def test():
+#     group = ['КиноПлюс', 'Познавательные', 'UHD']
+#     for item in group:
+#         epg_alias = aliased(EpgProgrammes)
+#         query = (
+#             select(Playlist).filter_by(group_title=item)
+#             .outerjoin(epg_alias, Playlist.id == epg_alias.playlist_id)
+#             .where(epg_alias.playlist_id.is_(None))
+#         )
+#         result = db.execute(query).scalars().all()
+#         for rec in result:
+#             print(rec.tvg_id)
+#
+#
+# test()

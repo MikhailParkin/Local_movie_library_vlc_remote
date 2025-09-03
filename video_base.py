@@ -23,6 +23,7 @@ class Categories(BaseModel):
     category = Column(VARCHAR(255), nullable=False)
     name = Column(VARCHAR(255), nullable=True)
     poster = Column(VARCHAR(255), nullable=True)
+    multiseries = Column(BOOLEAN, nullable=True)
     library: Mapped[list['Library'] | None] = relationship(back_populates="category_name")
 
 
@@ -46,6 +47,7 @@ class KPinfo(BaseModel):
     name = Column(VARCHAR(255), nullable=False)
     year = Column(Integer, nullable=True, unique=False)
     poster = Column(VARCHAR(255), nullable=True)
+    poster_filename = Column(VARCHAR(255), nullable=True)
     describe = Column(Text, nullable=True)
     rate = Column(VARCHAR(255), nullable=True)
     video_files: Mapped[list['VideoFiles']] = relationship(back_populates="kpinfo")
@@ -63,6 +65,7 @@ class VideoFiles(BaseModel):
     last_position = Column(Integer, nullable=True)
     active = Column(BOOLEAN, unique=False, default=True)
     poster = Column(VARCHAR(255), nullable=True)
+    poster_filename = Column(VARCHAR(255), nullable=True)
     kpinfo_id: Mapped[int | None] = mapped_column(ForeignKey("kpinfo.id"))
     kpinfo: Mapped[KPinfo | None] = relationship(back_populates="video_files")
 
@@ -80,6 +83,7 @@ class Seasons(BaseModel):
                                                   passive_deletes=True,)
     name = Column(VARCHAR(255), nullable=True)
     poster = Column(VARCHAR(255), nullable=True)
+    poster_filename = Column(VARCHAR(255), nullable=True)
 
 
 class Series(BaseModel):
@@ -94,6 +98,7 @@ class Series(BaseModel):
     active = Column(BOOLEAN, unique=False, default=True)
     name = Column(VARCHAR(255), nullable=True)
     poster = Column(VARCHAR(255), nullable=True)
+    poster_filename = Column(VARCHAR(255), nullable=True)
 
 
 class BackupBd(BaseModel):
@@ -115,6 +120,9 @@ class Playlist(BaseModel):
     url = Column(VARCHAR(255), nullable=False)
     favorite = Column(BOOLEAN, unique=False, default=False)
     active = Column(BOOLEAN, unique=False, default=True)
+    channel_number = Column(VARCHAR(255))
+    m3u_token = Column(VARCHAR(255))
+    epg_programme: Mapped[list['EpgProgrammes']] = relationship(back_populates="channel")
 
 
 class EpgProgrammes(BaseModel):
@@ -125,6 +133,8 @@ class EpgProgrammes(BaseModel):
     title = Column(VARCHAR(255))
     describe = Column(Text, nullable=True)
     tvg_id = Column(VARCHAR(255), nullable=False)
+    playlist_id: Mapped[int | None] = mapped_column(ForeignKey("playlist.id"))
+    channel: Mapped[Playlist | None] = relationship(back_populates="epg_programme")
 
 
 class Favorite(BaseModel):

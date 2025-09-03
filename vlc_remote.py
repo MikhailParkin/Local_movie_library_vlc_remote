@@ -2,6 +2,7 @@ import socket
 import subprocess
 from time import sleep
 from pathlib import Path
+import keyboard
 
 import manage_db as db_query
 
@@ -110,11 +111,15 @@ import manage_db as db_query
 
 """
 
+
 def open_vlc(file_path):
     command_send('quit')
     vlc_path = r'C:\Program Files (x86)\VideoLAN\VLC\vlc.exe'
     subprocess.Popen([vlc_path, file_path, '-f', '-I rc --rc-host localhost:9090'])
     print(rf'"{file_path}"')
+
+
+
 
 
 def command_send(msg):
@@ -138,8 +143,9 @@ def command_send(msg):
     except socket.error as e:
         print(e)
     if len(list_data) == 0:
-        print('conn_close')
         list_data.append('Socket close')
+
+    print(list_data)
     return list_data
 
 
@@ -159,9 +165,11 @@ def get_audio_stream():
     msg = "atrack"
     receive_data = command_send(msg)
     streams = []
+    i = 1
     for stream in receive_data:
-        if stream.startswith('| '):
-            streams.append(stream.strip('| '))
+        if stream.startswith('| ') and not stream.startswith('| -1'):
+            streams.append({'stream_index': i, 'title': stream.strip('| ')})
+            i += 1
 
     print('receive_data: ', receive_data)
     print('streams: ', streams)
@@ -214,7 +222,7 @@ def set_command(command):
             data = {'title': None, 'position': None}
     elif command == 'audio_list':
         data = get_audio_stream()
-    elif command == 'suboff':
+    elif command == 'sub_off':
         data = command_send('strack -1')
 
     else:
@@ -236,3 +244,52 @@ def set_playlist(playlist: list):
             command = f'enqueue {video}'
             command_send(command)
 
+
+def minimize_all_windows():
+    keyboard.press_and_release('win+d')
+    return 'Minimized'
+
+
+# minimize_all_windows()
+test_mkv = r"W:\Фильмы\1080p.Predator.Ultimate.Hunter.Edition.1987.DKom.[BDRip.H264.DTSRus.AC3Rus.DTSRus.DTSRus.DTSRus.DTSEng].mkv"
+
+
+def start_stream(mkv):
+    app_path = Path.cwd()
+    temp_path = Path(app_path, 'static', 'temp')
+    temp_fragment = (temp_path, 'stream_%03d.ts')
+    temp_file = Path(temp_path, 'output.m3u8')
+    ffmpeg_command = f'ffmpeg -i "{mkv}" -codec:v libx264 -profile:v main -preset:v slow -b:v 2000k -maxrate 2500k -bufsize 4000k -codec:a aac -b:a 128k -f hls -hls_time 10 -hls_list_size 5 -hls_flags delete_segments+append_list -hls_segment_filename "{temp_fragment}" {temp_file}'
+    print(ffmpeg_command)
+    subprocess.run(ffmpeg_command)
+
+
+# open_vlc(test_mkv)
+# set_command('audio_list')
+# command_send('title')
+# command_send('pause')
+
+
+def check_vlc_status():
+    response = command_send('title')
+    duration = 0
+    time = 0
+    if response[0] == 'Socket close':
+        status = 'Close'
+        title = 'В данный момент ничего не воспроизводится'
+    elif response[0] == 'Для продолжения нажмите кнопку паузы.':
+        status = 'Pause'
+    else:
+        status = 'Playing'
+
+    if status == 'Pause' or status == 'Playing':
+        title = command_send('get_title')
+        title = title[0]
+        duration = get_time_data('get_length')
+        time = get_time_data('get_time')
+    return {'status': status, 'title': title, 'duration': duration, 'time': time}
+
+
+# print(check_vlc_status())
+iptv = "http://r.only4.online/1116/video.m3u8?token=9MLHHqDt5t"
+# open_vlc(iptv)
